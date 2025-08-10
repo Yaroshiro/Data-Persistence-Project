@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -11,10 +12,13 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text BestScoreText;
     public GameObject GameOverText;
     
+    private string playerName;
     private bool m_Started = false;
     private int m_Points;
+    private int recordPoints;
     
     private bool m_GameOver = false;
 
@@ -36,6 +40,8 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+        playerName = Manager.playerName;
+        Load();
     }
 
     private void Update()
@@ -66,11 +72,57 @@ public class MainManager : MonoBehaviour
     {
         m_Points += point;
         ScoreText.text = $"Score : {m_Points}";
+        if (m_Points > recordPoints)
+        {
+            BestScoreText.text = $"Best Score : {playerName} : {m_Points}";
+        }
     }
 
     public void GameOver()
     {
+        if (m_Points > recordPoints)
+        {
+            recordPoints = m_Points;
+            Save();
+        }
         m_GameOver = true;
         GameOverText.SetActive(true);
     }
+
+    [System.Serializable]
+    class SaveData
+    {
+        public string playerName;
+        public int score;
+    }
+
+    private void Save()
+    {
+        string json = JsonUtility.ToJson(new SaveData
+        {
+            playerName = playerName,
+            score = m_Points
+        });
+
+        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
+    }
+
+    private void Load()
+    {
+        FileInfo f = new FileInfo(Application.persistentDataPath + "/savefile.json");
+
+        if (f.Exists)
+        {
+            string json = File.ReadAllText(f.FullName);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+            string recordPlayer = data.playerName;
+            recordPoints = data.score;
+            BestScoreText.text = $"Best Score : {recordPlayer} : {recordPoints}";
+        }
+        else
+        {
+            BestScoreText.text = "Best Score : None";
+        }
+    }
+
 }
